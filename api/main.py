@@ -4,6 +4,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import os
+import logging
+import tempfile
 from datetime import date, datetime, timedelta
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -25,7 +27,11 @@ from .auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
-# Настройка rate limiting
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Rate limiting setup
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
@@ -34,14 +40,14 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Обработка ошибок rate limiting
+# Rate limiting error handling
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене заменить на конкретные домены
+    allow_origins=["*"],  # In production, replace with specific domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,12 +61,26 @@ class DateRange(BaseModel):
 # Dependency to get Garmin client
 async def get_garmin_client(credentials: TokenData = Depends(get_current_active_user)) -> Garmin:
     try:
-        api = Garmin(credentials.email, credentials.password)
+        # Create temporary directory for tokens
+        temp_dir = tempfile.mkdtemp()
+        logger.info(f"Created temporary directory for tokens: {temp_dir}")
+        
+        # Try to use temporary directory for tokens
+        try:
+            api = Garmin(credentials.email, credentials.password, tokenstore=temp_dir)
+        except Exception as token_err:
+            logger.warning(f"Failed to use temporary directory, working without tokens: {str(token_err)}")
+            api = Garmin(credentials.email, credentials.password, tokenstore=None)
+            
+        logger.info(f"Authenticating user: {credentials.email}")
+        # login() is not an async method
         api.login()
         return api
     except (GarminConnectAuthenticationError, GarminConnectConnectionError) as err:
+        logger.error(f"Authentication error: {err}")
         raise HTTPException(status_code=401, detail=str(err))
     except Exception as err:
+        logger.error(f"Unexpected error: {err}")
         raise HTTPException(status_code=500, detail=str(err))
 
 @app.post("/token", response_model=Token)
@@ -70,27 +90,39 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
     try:
-        print(f"Login attempt for {form_data.username}, {form_data.password}")
-        # Check credentials through Garmin Connect
-        api = Garmin(form_data.username, form_data.password)
+        logger.info(f"Login attempt for user: {form_data.username}")
+        
+        # Create temporary directory for tokens
+        temp_dir = tempfile.mkdtemp()
+        logger.info(f"Created temporary directory for tokens: {temp_dir}")
+        
+        # Try to use temporary directory for tokens
+        try:
+            api = Garmin(form_data.username, form_data.password, tokenstore=temp_dir)
+        except Exception as token_err:
+            logger.warning(f"Failed to use temporary directory, working without tokens: {str(token_err)}")
+            api = Garmin(form_data.username, form_data.password, tokenstore=None)
+            
+        logger.info("Calling login() method for Garmin Connect API")
         api.login()
+        logger.info("Successfully authenticated with Garmin Connect API")
         
         # Create a token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": form_data.username, "password": form_data.password},
             expires_delta=access_token_expires
-        )
-        
+        )        
         return {
             "access_token": access_token,
             "token_type": "bearer",
             "expires_at": datetime.utcnow() + access_token_expires
         }
     except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(
             status_code=401,
-            detail=f"Incorrect username or password: {e}",
+            detail=f"Incorrect username or password: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -107,6 +139,7 @@ async def get_user_profile(
     try:
         return api.get_user_summary()
     except Exception as e:
+        logger.error(f"Error retrieving user profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/activities")
@@ -120,6 +153,7 @@ async def get_activities(
     try:
         return api.get_last_activity()
     except Exception as e:
+        logger.error(f"Error retrieving activities: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stats-and-body")
@@ -132,6 +166,7 @@ async def get_stats(
     try:
         return api.get_stats_and_body(date.isoformat())
     except Exception as e:
+        logger.error(f"Error retrieving stats: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/body-composition")
@@ -147,6 +182,7 @@ async def get_body_composition(
             date_range.end_date.isoformat()
         )
     except Exception as e:
+        logger.error(f"Error retrieving body composition data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/steps")
@@ -159,6 +195,7 @@ async def get_steps(
     try:
         return api.get_steps_data(date.isoformat())
     except Exception as e:
+        logger.error(f"Error retrieving steps data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/heart-rate")
@@ -171,6 +208,7 @@ async def get_heart_rate(
     try:
         return api.get_heart_rates(date.isoformat())
     except Exception as e:
+        logger.error(f"Error retrieving heart rate data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/sleep")
@@ -183,6 +221,7 @@ async def get_sleep(
     try:
         return api.get_sleep_data(date.isoformat())
     except Exception as e:
+        logger.error(f"Error retrieving sleep data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stress")
@@ -195,6 +234,7 @@ async def get_stress(
     try:
         return api.get_stress_data(date.isoformat())
     except Exception as e:
+        logger.error(f"Error retrieving stress data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/body-battery")
@@ -210,4 +250,5 @@ async def get_body_battery(
             date_range.end_date.isoformat()
         )
     except Exception as e:
+        logger.error(f"Error retrieving body battery data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 

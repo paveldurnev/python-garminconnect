@@ -15,7 +15,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-# Модели данных
+# Data models
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -29,7 +29,7 @@ class Credentials(BaseModel):
     email: EmailStr
     password: str
 
-# Настройки безопасности
+# Security settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
