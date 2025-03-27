@@ -70,6 +70,7 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
     try:
+        print(f"Login attempt for {form_data.username}, {form_data.password}")
         # Check credentials through Garmin Connect
         api = Garmin(form_data.username, form_data.password)
         api.login()
@@ -89,7 +90,7 @@ async def login_for_access_token(
     except Exception as e:
         raise HTTPException(
             status_code=401,
-            detail="Incorrect username or password",
+            detail=f"Incorrect username or password: {e}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
