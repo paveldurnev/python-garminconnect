@@ -62,15 +62,15 @@ class DateRange(BaseModel):
 async def get_garmin_client(credentials: TokenData = Depends(get_current_active_user)) -> Garmin:
     try:
         # Create temporary directory for tokens
-        temp_dir = tempfile.mkdtemp()
-        logger.info(f"Created temporary directory for tokens: {temp_dir}")
+        # temp_dir = tempfile.mkdtemp()
+        # logger.info(f"Created temporary directory for tokens: {temp_dir}")
         
         # Try to use temporary directory for tokens
         api = Garmin(credentials.email, credentials.password)
     
         logger.info(f"Authenticating user: {credentials.email}")
         # login() is not an async method
-        api.login(tokenstore=temp_dir)
+        api.login()
         return api
     except (GarminConnectAuthenticationError, GarminConnectConnectionError) as err:
         logger.error(f"Authentication error: {err}")
@@ -89,14 +89,14 @@ async def login_for_access_token(
         logger.info(f"Login attempt for user: {form_data.username}")
         
         # Create temporary directory for tokens
-        temp_dir = tempfile.mkdtemp()
-        logger.info(f"Created temporary directory for tokens: {temp_dir}")
+        # temp_dir = tempfile.mkdtemp()
+        # logger.info(f"Created temporary directory for tokens: {temp_dir}")
         
         # Try to use temporary directory
         api = Garmin(form_data.username, form_data.password)
             
-        logger.info("Calling login() method for Garmin Connect API")
-        api.login(tokenstore=temp_dir)
+        # logger.info("Calling login() method for Garmin Connect API")
+        api.login()
 
         logger.info("Successfully authenticated with Garmin Connect API")
         
