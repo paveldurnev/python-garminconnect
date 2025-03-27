@@ -1,13 +1,25 @@
 [project]
-name = "garminconnect"
-version = "0.2.25"
-description = "Python 3 API wrapper for Garmin Connect"
+name = "garminconnect-api"
+version = "0.1.0"
+description = "REST API wrapper for Garmin Connect"
 authors = [
-    {name = "Ron Klinkien", email = "ron@cyberjunky.nl"},
+    {name = "Your Name", email = "your.email@example.com"},
 ]
 dependencies = [
-    "garth==0.5.2",
-    "withings-sync==4.2.5",
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.6.0",
+    "garminconnect>=0.1.50",
+    "python-multipart>=0.0.9",
+    "email-validator>=2.1.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "slowapi>=0.1.8",
+    "garth>=0.5.2",
+    "requests>=2.0.0",
+    "requests-oauthlib>=1.3.1",
+    "lxml>=5.3.1",
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -19,36 +31,39 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 keywords=["garmin connect", "api", "garmin"]
-requires-python=">=3.10"
+requires-python = ">=3.9"
 [project.urls]
 "Homepage" = "https://github.com/cyberjunky/python-garminconnect"
 "Bug Tracker" = "https://github.com/cyberjunky/python-garminconnect/issues"
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 addopts = "--ignore=__pypackages__ --ignore-glob=*.yaml"
 
 [tool.mypy]
-ignore_missing_imports = true
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
 
 [tool.isort]
+profile = "black"
+line_length = 100
 multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-line_length = 79
-known_first_party = "garminconnect"
 
 [project.optional-dependencies]
 dev = [
-    "ipython",
-    "ipdb",
-    "ipykernel",
-    "pandas",
-    "matplotlib",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.26.0",
+    "black>=24.1.0",
+    "isort>=5.13.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
 ]
 linting = [
     "black",
@@ -91,3 +106,11 @@ testing = [
 example = [
     "readchar",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

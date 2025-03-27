@@ -40,7 +40,7 @@ api = None
 # Example selections and settings
 
 # Let's say we want to scrape all activities using switch menu_option "p". We change the values of the below variables, IE startdate days, limit,...
-today = datetime.date.today()
+today = datetime.date.today() #- datetime.timedelta(days=4)
 startdate = today - datetime.timedelta(days=7)  # Select past week
 start = 0
 limit = 100
