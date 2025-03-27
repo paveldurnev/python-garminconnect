@@ -66,15 +66,11 @@ async def get_garmin_client(credentials: TokenData = Depends(get_current_active_
         logger.info(f"Created temporary directory for tokens: {temp_dir}")
         
         # Try to use temporary directory for tokens
-        try:
-            api = Garmin(credentials.email, credentials.password, tokenstore=temp_dir)
-        except Exception as token_err:
-            logger.warning(f"Failed to use temporary directory, working without tokens: {str(token_err)}")
-            api = Garmin(credentials.email, credentials.password, tokenstore=None)
-            
+        api = Garmin(credentials.email, credentials.password)
+    
         logger.info(f"Authenticating user: {credentials.email}")
         # login() is not an async method
-        api.login()
+        api.login(tokenstore=temp_dir)
         return api
     except (GarminConnectAuthenticationError, GarminConnectConnectionError) as err:
         logger.error(f"Authentication error: {err}")
@@ -96,15 +92,12 @@ async def login_for_access_token(
         temp_dir = tempfile.mkdtemp()
         logger.info(f"Created temporary directory for tokens: {temp_dir}")
         
-        # Try to use temporary directory for tokens
-        try:
-            api = Garmin(form_data.username, form_data.password, tokenstore=temp_dir)
-        except Exception as token_err:
-            logger.warning(f"Failed to use temporary directory, working without tokens: {str(token_err)}")
-            api = Garmin(form_data.username, form_data.password, tokenstore=None)
+        # Try to use temporary directory
+        api = Garmin(form_data.username, form_data.password)
             
         logger.info("Calling login() method for Garmin Connect API")
-        api.login()
+        api.login(tokenstore=temp_dir)
+
         logger.info("Successfully authenticated with Garmin Connect API")
         
         # Create a token
