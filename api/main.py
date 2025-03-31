@@ -245,3 +245,18 @@ async def get_body_battery(
     except Exception as e:
         logger.error(f"Error retrieving body battery data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 
+
+@app.get("/fitness-age")
+@limiter.limit("30/minute")
+async def get_fitness_age(
+    request: Request,
+    date: date,
+    api: Garmin = Depends(get_garmin_client)
+):
+    try:
+        return api.get_fitnessage_data(
+            date.isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving fitness age data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) 
